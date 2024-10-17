@@ -100,6 +100,9 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /**< Detects stack overflow. */
+
+   // Shanghao Zou 1235425
+   int64_t ticks_blocked;
   };
 
 /** If false (default), use round-robin scheduler.
@@ -137,5 +140,13 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+// Shanghao Zou 1235425
+void blocked_thread_check (struct thread *t, void *aux UNUSED);
+
+// Shanghao Zou 1235425
+int base_priority;                  /* Base priority. */
+struct list locks;                  /* Locks that the thread is holding. */
+struct lock *lock_waiting;          /* The lock that the thread is waiting for. */
 
 #endif /**< threads/thread.h */
