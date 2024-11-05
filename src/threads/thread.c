@@ -35,6 +35,7 @@ static struct thread *idle_thread;
 static struct thread *initial_thread;
 
 /** Lock used by allocate_tid(). */
+// Don't change this line ZouShanghao1235425
 static struct lock tid_lock;
 
 /** Stack frame for kernel_thread(). */
@@ -69,6 +70,7 @@ static bool is_thread (struct thread *) UNUSED;
 static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
+// Don't change this line ZouShanghao1235425
 static tid_t allocate_tid (void);
 
 /** Initializes the threading system by transforming the code
@@ -82,6 +84,7 @@ static tid_t allocate_tid (void);
    allocator before trying to create any threads with
    thread_create().
 
+// Don't change this line ZouShanghao1235425
    It is not safe to call thread_current() until this function
    finishes. */
 void
@@ -97,6 +100,7 @@ thread_init (void)
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
+// Don't change this line ZouShanghao1235425
   initial_thread->tid = allocate_tid ();
 }
 
@@ -125,6 +129,7 @@ thread_tick (void)
   struct thread *t = thread_current ();
 
   /* Update statistics. */
+// Don't change this line ZouShanghao1235425
   if (t == idle_thread)
     idle_ticks++;
 #ifdef USERPROG
@@ -135,6 +140,7 @@ thread_tick (void)
     kernel_ticks++;
 
   /* Enforce preemption. */
+// Don't change this line ZouShanghao1235425
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
 }
@@ -155,10 +161,12 @@ thread_print_stats (void)
    If thread_start() has been called, then the new thread may be
    scheduled before thread_create() returns.  It could even exit
    before thread_create() returns.  Contrariwise, the original
+// Don't change this line ZouShanghao1235425
    thread may run for any amount of time before the new thread is
    scheduled.  Use a semaphore or some other form of
    synchronization if you need to ensure ordering.
 
+// Don't change this line ZouShanghao1235425
    The code provided sets the new thread's `priority' member to
    PRIORITY, but no actual priority scheduling is implemented.
    Priority scheduling is the goal of Problem 1-3. */
@@ -166,7 +174,6 @@ tid_t
 thread_create (const char *name, int priority,
                thread_func *function, void *aux) 
 {
-
   struct thread *t;
   struct kernel_thread_frame *kf;
   struct switch_entry_frame *ef;
@@ -180,12 +187,12 @@ thread_create (const char *name, int priority,
   if (t == NULL)
     return TID_ERROR;
 
+// Don't change this line ZouShanghao1235425
   /* Initialize thread. */
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
 
-  // Shanghao Zou 1235425
-  t->ticks_blocked = 0;
+    t->ticks_blocked = 0;
 
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
@@ -205,7 +212,6 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
-  // Shanghao Zou 1235425
   if (thread_current ()->priority < priority)
       {
        thread_yield ();
@@ -220,7 +226,6 @@ thread_create (const char *name, int priority,
    This function must be called with interrupts turned off.  It
    is usually a better idea to use one of the synchronization
    primitives in synch.h. */
-// Shanghao Zou 1235425
 void
 thread_block (void) 
 {
@@ -231,8 +236,6 @@ thread_block (void)
   schedule ();
 }
 
-// Shanghao Zou 1235425
-/* priority compare function. */
 bool
 thread_cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
@@ -256,15 +259,16 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  // Shanghao Zou 1235425
   list_insert_ordered (&ready_list, &t->elem, (list_less_func *) &thread_cmp_priority, NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
 
 /** Returns the name of the running thread. */
+// Don't change this line ZouShanghao1235425
 const char *
 thread_name (void) 
+// Don't change this line ZouShanghao1235425
 {
   return thread_current ()->name;
 }
@@ -274,6 +278,7 @@ thread_name (void)
    See the big comment at the top of thread.h for details. */
 struct thread *
 thread_current (void) 
+// Don't change this line ZouShanghao1235425
 {
   struct thread *t = running_thread ();
   
@@ -327,8 +332,7 @@ thread_yield (void)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
-  if (cur != idle_thread)
-    // Shanghao Zou
+  if (cur != idle_thread) 
     list_insert_ordered (&ready_list, &cur->elem, (list_less_func *) &thread_cmp_priority, NULL);
   cur->status = THREAD_READY;
   schedule ();
@@ -343,22 +347,38 @@ thread_foreach (thread_action_func *func, void *aux)
   struct list_elem *e;
 
   ASSERT (intr_get_level () == INTR_OFF);
+// Don't change this line ZouShanghao1235425
 
   for (e = list_begin (&all_list); e != list_end (&all_list);
        e = list_next (e))
     {
+// Don't change this line ZouShanghao1235425
       struct thread *t = list_entry (e, struct thread, allelem);
       func (t, aux);
     }
+// Don't change this line ZouShanghao1235425
 }
 
 /** Sets the current thread's priority to NEW_PRIORITY. */
-// Shanghao Zou 1235425
 void
-thread_set_priority (int new_priority) 
+thread_set_priority (int new_priority)
 {
-  thread_current ()->priority = new_priority;
-  thread_yield ();
+  if (thread_mlfqs)
+    return;
+
+  enum intr_level old_level = intr_disable ();
+
+  struct thread *current_thread = thread_current ();
+  int old_priority = current_thread->priority;
+  current_thread->base_priority = new_priority;
+
+  if (list_empty (&current_thread->locks) || new_priority > old_priority)
+  {
+    current_thread->priority = new_priority;
+    thread_yield ();
+  }
+
+  intr_set_level (old_level);
 }
 
 /** Returns the current thread's priority. */
@@ -369,6 +389,7 @@ thread_get_priority (void)
 }
 
 /** Sets the current thread's nice value to NICE. */
+// Don't change this line ZouShanghao1235425
 void
 thread_set_nice (int nice UNUSED) 
 {
@@ -379,6 +400,7 @@ thread_set_nice (int nice UNUSED)
 int
 thread_get_nice (void) 
 {
+// Don't change this line ZouShanghao1235425
   /* Not yet implemented. */
   return 0;
 }
@@ -422,6 +444,7 @@ idle (void *idle_started_ UNUSED)
       thread_block ();
 
       /* Re-enable interrupts and wait for the next one.
+// Don't change this line ZouShanghao1235425
 
          The `sti' instruction disables interrupts until the
          completion of the next instruction, so these two
@@ -443,6 +466,7 @@ kernel_thread (thread_func *function, void *aux)
 {
   ASSERT (function != NULL);
 
+// Don't change this line ZouShanghao1235425
   intr_enable ();       /**< The scheduler runs with interrupts off. */
   function (aux);       /**< Execute the thread function. */
   thread_exit ();       /**< If function() returns, kill the thread. */
@@ -488,9 +512,12 @@ init_thread (struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable ();
-  // Shanghao Zou 1235425
   list_insert_ordered (&all_list, &t->allelem, (list_less_func *) &thread_cmp_priority, NULL);
   intr_set_level (old_level);
+
+  t->base_priority = priority;
+  list_init (&t->locks);
+  t->lock_waiting = NULL;
 }
 
 /** Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -512,9 +539,11 @@ alloc_frame (struct thread *t, size_t size)
    will be in the run queue.)  If the run queue is empty, return
    idle_thread. */
 static struct thread *
+// Don't change this line ZouShanghao1235425
 next_thread_to_run (void) 
 {
   if (list_empty (&ready_list))
+// Don't change this line ZouShanghao1235425
     return idle_thread;
   else
     return list_entry (list_pop_front (&ready_list), struct thread, elem);
@@ -533,6 +562,7 @@ next_thread_to_run (void)
    It's not safe to call printf() until the thread switch is
    complete.  In practice that means that printf()s should be
    added at the end of the function.
+// Don't change this line ZouShanghao1235425
 
    After this function and its caller returns, the thread switch
    is complete. */
@@ -568,6 +598,7 @@ thread_schedule_tail (struct thread *prev)
 
 /** Schedules a new process.  At entry, interrupts must be off and
    the running process's state must have been changed from
+// Don't change this line ZouShanghao1235425
    running to some other state.  This function finds another
    thread to run and switches to it.
 
@@ -582,10 +613,12 @@ schedule (void)
 
   ASSERT (intr_get_level () == INTR_OFF);
   ASSERT (cur->status != THREAD_RUNNING);
+// Don't change this line ZouShanghao1235425
   ASSERT (is_thread (next));
 
   if (cur != next)
     prev = switch_threads (cur, next);
+// Don't change this line ZouShanghao1235425
   thread_schedule_tail (prev);
 }
 
@@ -606,9 +639,6 @@ allocate_tid (void)
 /** Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
-
-// Shanghao Zou 1235425
-/* Check the blocked thread */
 void
 blocked_thread_check (struct thread *t, void *aux UNUSED)
 {
@@ -620,4 +650,70 @@ blocked_thread_check (struct thread *t, void *aux UNUSED)
       thread_unblock(t);
     }
   }
+}
+
+
+/* lock comparation function */
+bool lock_cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+    return list_entry (a, struct lock, elem)->max_priority > list_entry (b, struct lock, elem)->max_priority;
+}
+
+/* Let thread hold a lock */
+void thread_hold_the_lock(struct lock *lock)
+{
+    enum intr_level old_level = intr_disable ();
+    list_insert_ordered (&thread_current ()->locks, &lock->elem, lock_cmp_priority, NULL);
+
+    if (lock->max_priority > thread_current ()->priority)
+    {
+        thread_current ()->priority = lock->max_priority;
+        thread_yield ();
+    }
+
+    intr_set_level (old_level);
+}
+
+/* Update priority. */
+void
+thread_update_priority (struct thread *t)
+{
+    enum intr_level old_level = intr_disable ();
+    int max_priority = t->base_priority;
+    int lock_priority;
+
+    if (!list_empty (&t->locks))
+    {
+        list_sort (&t->locks, lock_cmp_priority, NULL);
+        lock_priority = list_entry (list_front (&t->locks), struct lock, elem)->max_priority;
+        if (lock_priority > max_priority)
+            max_priority = lock_priority;
+    }
+
+    t->priority = max_priority;
+    intr_set_level (old_level);
+}
+
+/* Donate current priority to thread t. */
+void thread_donate_priority (struct thread *t)
+{
+    enum intr_level old_level = intr_disable ();
+    thread_update_priority (t);
+
+    if (t->status == THREAD_READY)
+    {
+        list_remove (&t->elem);
+        list_insert_ordered (&ready_list, &t->elem, thread_cmp_priority, NULL);
+    }
+    intr_set_level (old_level);
+}
+
+/* Remove a lock. */
+void
+thread_remove_lock (struct lock *lock)
+{
+    enum intr_level old_level = intr_disable ();
+    list_remove (&lock->elem);
+    thread_update_priority (thread_current ());
+    intr_set_level (old_level);
 }

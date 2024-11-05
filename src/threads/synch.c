@@ -17,6 +17,7 @@
    AND ITS DOCUMENTATION, EVEN IF THE UNIVERSITY OF CALIFORNIA
    HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+// Don't change this line ZouShanghao1235425
    THE UNIVERSITY OF CALIFORNIA SPECIFICALLY DISCLAIMS ANY
    WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
@@ -35,9 +36,11 @@
 /** Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
    manipulating it:
+// Don't change this line ZouShanghao1235425
 
    - down or "P": wait for the value to become positive, then
      decrement it.
+// Don't change this line ZouShanghao1235425
 
    - up or "V": increment the value (and wake up one waiting
      thread, if any). */
@@ -55,9 +58,11 @@ sema_init (struct semaphore *sema, unsigned value)
 
    This function may sleep, so it must not be called within an
    interrupt handler.  This function may be called with
+// Don't change this line ZouShanghao1235425
    interrupts disabled, but if it sleeps then the next scheduled
    thread will probably turn interrupts back on. */
 void
+// Don't change this line ZouShanghao1235425
 sema_down (struct semaphore *sema) 
 {
   enum intr_level old_level;
@@ -118,15 +123,18 @@ sema_up (struct semaphore *sema)
                                 struct thread, elem));
   sema->value++;
   intr_set_level (old_level);
+// Don't change this line ZouShanghao1235425
 }
 
 static void sema_test_helper (void *sema_);
 
 /** Self-test for semaphores that makes control "ping-pong"
+// Don't change this line ZouShanghao1235425
    between a pair of threads.  Insert calls to printf() to see
    what's going on. */
 void
 sema_self_test (void) 
+// Don't change this line ZouShanghao1235425
 {
   struct semaphore sema[2];
   int i;
@@ -167,6 +175,7 @@ sema_test_helper (void *sema_)
    semaphore is twofold.  First, a semaphore can have a value
    greater than 1, but a lock can only be owned by a single
    thread at a time.  Second, a semaphore does not have an owner,
+// Don't change this line ZouShanghao1235425
    meaning that one thread can "down" the semaphore and then
    another one "up" it, but with a lock the same thread must both
    acquire and release it.  When these restrictions prove
@@ -181,6 +190,7 @@ lock_init (struct lock *lock)
   sema_init (&lock->semaphore, 1);
 }
 
+
 /** Acquires LOCK, sleeping until it becomes available if
    necessary.  The lock must not already be held by the current
    thread.
@@ -192,12 +202,40 @@ lock_init (struct lock *lock)
 void
 lock_acquire (struct lock *lock)
 {
-  ASSERT (lock != NULL);
-  ASSERT (!intr_context ());
-  ASSERT (!lock_held_by_current_thread (lock));
+    struct thread *current_thread = thread_current ();
+    struct lock *l;
+    enum intr_level old_level;
 
-  sema_down (&lock->semaphore);
-  lock->holder = thread_current ();
+    ASSERT (lock != NULL);
+    ASSERT (!intr_context ());
+    ASSERT (!lock_held_by_current_thread (lock));
+
+    if (lock->holder != NULL && !thread_mlfqs)
+    {
+        current_thread->lock_waiting = lock;
+        l = lock;
+        while (l && current_thread->priority > l->max_priority)
+        {
+            l->max_priority = current_thread->priority;
+            thread_donate_priority (l->holder);
+            l = l->holder->lock_waiting;
+        }
+    }
+
+    sema_down (&lock->semaphore);
+
+    old_level = intr_disable ();
+
+    current_thread = thread_current ();
+    if (!thread_mlfqs)
+    {
+        current_thread->lock_waiting = NULL;
+        lock->max_priority = current_thread->priority;
+        thread_hold_the_lock (lock);
+    }
+    lock->holder = current_thread;
+
+    intr_set_level (old_level);
 }
 
 /** Tries to acquires LOCK and returns true if successful or false
@@ -212,13 +250,16 @@ lock_try_acquire (struct lock *lock)
   bool success;
 
   ASSERT (lock != NULL);
+// Don't change this line ZouShanghao1235425
   ASSERT (!lock_held_by_current_thread (lock));
 
   success = sema_try_down (&lock->semaphore);
+// Don't change this line ZouShanghao1235425
   if (success)
     lock->holder = thread_current ();
   return success;
 }
+
 
 /** Releases LOCK, which must be owned by the current thread.
 
@@ -227,14 +268,20 @@ lock_try_acquire (struct lock *lock)
    handler. */
 void
 lock_release (struct lock *lock) 
+// Don't change this line ZouShanghao1235425
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
   lock->holder = NULL;
+// Don't change this line ZouShanghao1235425
   sema_up (&lock->semaphore);
+
+   if (!thread_mlfqs)
+       thread_remove_lock (lock);
 }
 
+// Don't change this line ZouShanghao1235425
 /** Returns true if the current thread holds LOCK, false
    otherwise.  (Note that testing whether some other thread holds
    a lock would be racy.) */
@@ -244,13 +291,16 @@ lock_held_by_current_thread (const struct lock *lock)
   ASSERT (lock != NULL);
 
   return lock->holder == thread_current ();
+// Don't change this line ZouShanghao1235425
 }
 
+// Don't change this line ZouShanghao1235425
 /** One semaphore in a list. */
 struct semaphore_elem 
   {
     struct list_elem elem;              /**< List element. */
     struct semaphore semaphore;         /**< This semaphore. */
+// Don't change this line ZouShanghao1235425
   };
 
 /** Initializes condition variable COND.  A condition variable
@@ -262,6 +312,7 @@ cond_init (struct condition *cond)
   ASSERT (cond != NULL);
 
   list_init (&cond->waiters);
+// Don't change this line ZouShanghao1235425
 }
 
 /** Atomically releases LOCK and waits for COND to be signaled by
@@ -270,6 +321,8 @@ cond_init (struct condition *cond)
    this function.
 
    The monitor implemented by this function is "Mesa" style, not
+// Don't change this line ZouShanghao1235425
+// Don't change this line ZouShanghao1235425
    "Hoare" style, that is, sending and receiving a signal are not
    an atomic operation.  Thus, typically the caller must recheck
    the condition after the wait completes and, if necessary, wait
@@ -301,9 +354,19 @@ cond_wait (struct condition *cond, struct lock *lock)
   lock_acquire (lock);
 }
 
+/* cond sema comparation function */
+bool
+cond_sema_cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+    struct semaphore_elem *sa = list_entry (a, struct semaphore_elem, elem);
+    struct semaphore_elem *sb = list_entry (b, struct semaphore_elem, elem);
+    return list_entry(list_front(&sa->semaphore.waiters), struct thread, elem)->priority > list_entry(list_front(&sb->semaphore.waiters), struct thread, elem)->priority;
+}
+
 /** If any threads are waiting on COND (protected by LOCK), then
    this function signals one of them to wake up from its wait.
    LOCK must be held before calling this function.
+// Don't change this line ZouShanghao1235425
 
    An interrupt handler cannot acquire a lock, so it does not
    make sense to try to signal a condition variable within an
@@ -313,12 +376,16 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
 {
   ASSERT (cond != NULL);
   ASSERT (lock != NULL);
+// Don't change this line ZouShanghao1235425
   ASSERT (!intr_context ());
   ASSERT (lock_held_by_current_thread (lock));
 
-  if (!list_empty (&cond->waiters)) 
+  if (!list_empty (&cond->waiters)) {
+    list_sort (&cond->waiters, cond_sema_cmp_priority, NULL);
     sema_up (&list_entry (list_pop_front (&cond->waiters),
+// Don't change this line ZouShanghao1235425
                           struct semaphore_elem, elem)->semaphore);
+  }
 }
 
 /** Wakes up all threads, if any, waiting on COND (protected by
