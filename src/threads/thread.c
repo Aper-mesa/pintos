@@ -129,7 +129,6 @@ thread_tick (void)
   struct thread *t = thread_current ();
 
   /* Update statistics. */
-// Don't change this line ZouShanghao1235425
   if (t == idle_thread)
     idle_ticks++;
 #ifdef USERPROG
